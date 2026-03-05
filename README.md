@@ -13,6 +13,7 @@ Exemplo:
 - **Pesquisador** coleta informações e tendências do setor
 - **Estrategista** gera ideias e define a abordagem
 - **Redator** produz o conteúdo final
+- **Designer** cria as imagens para redes sociais
 - **Revisor** garante qualidade antes da entrega
 
 ## Instalação
@@ -43,18 +44,22 @@ npx opensquad update
 
 ## Criando seu Squad
 
-Descreva o que você precisa:
+Abra o menu:
 
 ```
-/opensquad create "Um squad que escreve posts no LinkedIn sobre tendências de IA"
+/opensquad
 ```
 
-O **Arquiteto** faz algumas perguntas, projeta o squad e configura tudo automaticamente. Você aprova o design antes de qualquer execução.
+O **Opensquad** vai te mostrar todas as opções disponíveis. 
+
+Para criar um novo squad, basta selecionar a opção, e o **Arquiteto** faz algumas perguntas, projeta o squad e configura tudo automaticamente. Você aprova o design antes de qualquer execução.
 
 ## Executando um Squad
 
+Você pode executar o squad novamente com /opensquad, ou pedindo diretamente:
+
 ```
-/opensquad run <nome-do-squad>
+/opensquad rode o squad <nome-do-squad>
 ```
 
 O squad executa automaticamente, pausando apenas nos checkpoints onde sua decisão é necessária.
@@ -62,10 +67,13 @@ O squad executa automaticamente, pausando apenas nos checkpoints onde sua decis�
 ## Exemplos
 
 ```
-/opensquad create "Squad que gera carrosséis de Instagram a partir de notícias quentes, cria as imagens e publica automaticamente"
-/opensquad create "Squad que produz todos os materiais de lançamento de infoproduto: páginas de vendas, mensagens de WhatsApp, emails e roteiros de CPL"
-/opensquad create "Squad que escreve tutoriais completos com prints de tela para treinamento de colaboradores"
-/opensquad create "Squad que pega vídeos do YouTube e gera cortes virais automaticamente"
+/opensquad
+/opensquad crie um Squad que gera carrosséis de Instagram a partir de notícias quentes, cria as imagens e publica automaticamente
+/opensquad quero um Squad que produz todos os materiais de lançamento de infoproduto: páginas de vendas, mensagens de WhatsApp, emails e roteiros de CPL
+/opensquad crie um Squad que escreve tutoriais completos com prints de tela para treinamento de colaboradores
+/opensquad crie um "Squad que pega vídeos do YouTube e gera cortes virais automaticamente"
+/opensquad roda o squad carrosseis-instagram
+
 ```
 
 ## Comandos
