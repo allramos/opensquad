@@ -260,7 +260,7 @@ Apply this transformation consistently for every write in this step.
 - Wait for user input before proceeding
 - Save the user's choice/response for the next step
 - **If the step frontmatter contains `outputFile`**: after collecting the user's full response,
-  write it to the specified file using the Write tool before moving to the next step.
+  apply the Output Path Transformation **Step 1 only** (run_id injection — skip Step 2, version folder) to the `outputFile` path, then write the response to the transformed path using the Write tool before moving to the next step. Checkpoint files are user input captures, not versioned output — Step 2 does not apply here, regardless of the general "every write" rule in the Output Path Transformation section above.
   Use this format:
   ```
   # Research Focus
