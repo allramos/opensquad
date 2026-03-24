@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useSquadSocket } from "@/hooks/useSquadSocket";
 import { useNavStore } from "@/store/useNavStore";
+import { useI18nStore } from "@/store/useI18nStore";
 import { Sidebar } from "@/components/Sidebar";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { MonitorPage } from "@/pages/MonitorPage";
@@ -11,6 +13,9 @@ import { SettingsPage } from "@/pages/SettingsPage";
 export function App() {
   useSquadSocket();
   const page = useNavStore((s) => s.currentPage);
+  const loadI18n = useI18nStore((s) => s.loadFromPreferences);
+
+  useEffect(() => { loadI18n(); }, [loadI18n]);
 
   return (
     <div style={{ display: "flex", height: "100%", width: "100%" }}>
