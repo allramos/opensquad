@@ -264,6 +264,157 @@ async function getSquad(projectRoot: string, code: string) {
   }
 }
 
+async function readModelConfig(projectRoot: string) {
+  const cfgPath = path.join(projectRoot, "_opensquad", "config.yaml");
+  try {
+    const raw = await fsp.readFile(cfgPath, "utf-8");
+    const parsed = parseYaml(raw);
+    return {
+      models: parsed?.models ?? {
+        orchestrator: "powerful",
+        writer: "powerful",
+        researcher: "fast",
+        investigator: "fast",
+      },
+    };
+  } catch {
+    return {
+      models: {
+        orchestrator: "powerful",
+        writer: "powerful",
+        researcher: "fast",
+        investigator: "fast",
+      },
+    };
+  }
+}
+
+async function writeModelConfig(
+  projectRoot: string,
+  body: { models: Record<string, string> },
+) {
+  const cfgDir = path.join(projectRoot, "_opensquad");
+  await fsp.mkdir(cfgDir, { recursive: true });
+  const cfgPath = path.join(cfgDir, "config.yaml");
+
+  const models = body.models ?? {};
+  const lines = [
+    "# Opensquad Model Tier Configuration",
+    "#",
+    "# Tier meanings per environment:",
+    "#   powerful — strongest available model",
+    "#   fast     — fastest/lightest available model",
+    "#",
+    "models:",
+  ];
+  for (const [role, tier] of Object.entries(models)) {
+    lines.push(`  ${role}: ${tier}`);
+  }
+  await fsp.writeFile(cfgPath, lines.join("\n") + "\n", "utf-8");
+}
+
+const ID_REGEX = /^[a-z0-9][a-z0-9-]*$/;
+
+async function listAvailableSkills(projectRoot: string) {
+  const bundledDir = path.join(projectRoot, "skills");
+  const installedDir = path.join(projectRoot, "skills");
+  const entries = await dirEntries(bundledDir);
+  const matter = (await import("gray-matter")).default;
+  const installed = new Set((await dirEntries(installedDir)).filter(e => e.isDirectory()).map(e => e.name));
+  const results: Record<string, unknown>[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const slug = entry.name;
+    try {
+      const raw = await fsp.readFile(path.join(bundledDir, slug, "SKILL.md"), "utf-8");
+      const { data } = matter(raw);
+      results.push({
+        slug, name: data.name ?? slug, description: data.description ?? "",
+        type: data.type ?? null, version: data.version ?? null,
+        env: Array.isArray(data.env) ? data.env : [],
+        installed: installed.has(slug),
+      });
+    } catch {
+      results.push({ slug, name: slug, description: "", type: null, version: null, env: [], installed: installed.has(slug) });
+    }
+  }
+  return results;
+}
+
+async function listAvailableAgents(projectRoot: string) {
+  const bundledDir = path.join(projectRoot, "agents");
+  const installedDir = path.join(projectRoot, "agents");
+  const matter = (await import("gray-matter")).default;
+
+  // Bundled agents: directories with AGENT.md
+  const bundledEntries = await dirEntries(bundledDir);
+  // Installed agents: *.agent.md files
+  const installedFiles = (await dirEntries(installedDir)).filter(e => e.isFile() && e.name.endsWith(".agent.md")).map(e => e.name.replace(/\.agent\.md$/, ""));
+  const installedSet = new Set(installedFiles);
+
+  const results: Record<string, unknown>[] = [];
+  for (const entry of bundledEntries) {
+    if (!entry.isDirectory()) continue;
+    const slug = entry.name;
+    try {
+      const raw = await fsp.readFile(path.join(bundledDir, slug, "AGENT.md"), "utf-8");
+      const { data } = matter(raw);
+      results.push({
+        slug, name: data.name ?? slug, description: data.description ?? "",
+        category: data.category ?? null, icon: data.icon ?? null,
+        version: data.version ?? null, installed: installedSet.has(slug),
+      });
+    } catch {
+      // Skip dirs without AGENT.md
+    }
+  }
+  return results;
+}
+
+function isProtectedPath(relativePath: string): boolean {
+  const normalized = relativePath.replace(/\\/g, "/");
+  const PROTECTED = ["_opensquad/_memory", "_opensquad/_investigations", "agents", "squads"];
+  return PROTECTED.some(p => normalized === p || normalized.startsWith(p + "/"));
+}
+
+async function getTemplateEntries(dir: string): Promise<string[]> {
+  const results: string[] = [];
+  const entries = await fsp.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...(await getTemplateEntries(fullPath)));
+    else results.push(fullPath);
+  }
+  return results;
+}
+
+async function runCoreUpdate(projectRoot: string) {
+  const templatesDir = path.join(projectRoot, "templates");
+
+  let oldVersion = "unknown";
+  try {
+    oldVersion = (await fsp.readFile(path.join(projectRoot, "_opensquad", ".opensquad-version"), "utf-8")).trim();
+  } catch { /* legacy install */ }
+
+  const newVersion = (await fsp.readFile(path.join(templatesDir, "_opensquad", ".opensquad-version"), "utf-8")).trim();
+
+  const entries = await getTemplateEntries(templatesDir);
+  let count = 0;
+
+  for (const entry of entries) {
+    const relativePath = path.relative(templatesDir, entry);
+    if (isProtectedPath(relativePath)) continue;
+    if (relativePath.replace(/\\/g, "/").startsWith("ide-templates/")) continue;
+
+    const destPath = path.join(projectRoot, relativePath);
+    await fsp.mkdir(path.dirname(destPath), { recursive: true });
+    await fsp.cp(entry, destPath);
+    count++;
+  }
+
+  return { from: oldVersion, to: newVersion, filesUpdated: count };
+}
+
 async function readEnvFile(projectRoot: string): Promise<Record<string, string>> {
   const envPath = path.join(projectRoot, ".env");
   try {
@@ -420,6 +571,86 @@ export function registerApiRoutes(
         }
         await writeEnvFile(projectRoot, body);
         return jsonResponse(res, 200, { ok: true });
+      }
+
+      // GET /api/model-config
+      if (method === "GET" && url === "/api/model-config") {
+        const cfg = await readModelConfig(projectRoot);
+        return jsonResponse(res, 200, cfg);
+      }
+
+      // PUT /api/model-config
+      if (method === "PUT" && url === "/api/model-config") {
+        const body = JSON.parse(await readBody(req));
+        await writeModelConfig(projectRoot, body);
+        return jsonResponse(res, 200, { ok: true });
+      }
+
+      // GET /api/skills/available
+      if (method === "GET" && url === "/api/skills/available") {
+        const available = await listAvailableSkills(projectRoot);
+        return jsonResponse(res, 200, available);
+      }
+
+      // POST /api/skills/install
+      if (method === "POST" && url === "/api/skills/install") {
+        const body = JSON.parse(await readBody(req));
+        const id = body?.id;
+        if (!id || !ID_REGEX.test(id)) return jsonResponse(res, 400, { error: "Invalid skill id" });
+        const srcDir = path.join(projectRoot, "skills", id);
+        const destDir = path.join(projectRoot, "skills", id);
+        // In dev, src===dest, so just check it exists
+        if (path.resolve(srcDir) === path.resolve(destDir)) {
+          try { await fsp.stat(path.join(srcDir, "SKILL.md")); } catch { return jsonResponse(res, 404, { error: "Skill not found" }); }
+          return jsonResponse(res, 200, { ok: true, id });
+        }
+        try { await fsp.stat(srcDir); } catch { return jsonResponse(res, 404, { error: "Skill not found in registry" }); }
+        try { await fsp.stat(destDir); return jsonResponse(res, 409, { error: "Skill already installed" }); } catch { /* not installed — good */ }
+        await fsp.cp(srcDir, destDir, { recursive: true });
+        return jsonResponse(res, 200, { ok: true, id });
+      }
+
+      // POST /api/skills/uninstall
+      if (method === "POST" && url === "/api/skills/uninstall") {
+        const body = JSON.parse(await readBody(req));
+        const id = body?.id;
+        if (!id || !ID_REGEX.test(id)) return jsonResponse(res, 400, { error: "Invalid skill id" });
+        await fsp.rm(path.join(projectRoot, "skills", id), { recursive: true, force: true });
+        return jsonResponse(res, 200, { ok: true, id });
+      }
+
+      // GET /api/agents/available
+      if (method === "GET" && url === "/api/agents/available") {
+        const available = await listAvailableAgents(projectRoot);
+        return jsonResponse(res, 200, available);
+      }
+
+      // POST /api/agents/install
+      if (method === "POST" && url === "/api/agents/install") {
+        const body = JSON.parse(await readBody(req));
+        const id = body?.id;
+        if (!id || !ID_REGEX.test(id)) return jsonResponse(res, 400, { error: "Invalid agent id" });
+        const srcFile = path.join(projectRoot, "agents", id, "AGENT.md");
+        try { await fsp.stat(srcFile); } catch { return jsonResponse(res, 404, { error: "Agent not found in registry" }); }
+        const destDir = path.join(projectRoot, "agents");
+        await fsp.mkdir(destDir, { recursive: true });
+        await fsp.copyFile(srcFile, path.join(destDir, `${id}.agent.md`));
+        return jsonResponse(res, 200, { ok: true, id });
+      }
+
+      // POST /api/agents/uninstall
+      if (method === "POST" && url === "/api/agents/uninstall") {
+        const body = JSON.parse(await readBody(req));
+        const id = body?.id;
+        if (!id || !ID_REGEX.test(id)) return jsonResponse(res, 400, { error: "Invalid agent id" });
+        await fsp.rm(path.join(projectRoot, "agents", `${id}.agent.md`), { force: true });
+        return jsonResponse(res, 200, { ok: true, id });
+      }
+
+      // POST /api/update
+      if (method === "POST" && url === "/api/update") {
+        const result = await runCoreUpdate(projectRoot);
+        return jsonResponse(res, 200, { ok: true, ...result });
       }
 
       // Not one of our routes — pass through

@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { MonitorPage } from "@/pages/MonitorPage";
 import { SquadsPage } from "@/pages/SquadsPage";
 import { SkillsPage } from "@/pages/SkillsPage";
+import { AgentsPage } from "@/pages/AgentsPage";
 import { RunsPage } from "@/pages/RunsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
@@ -25,6 +26,7 @@ export function App() {
         {page === "monitor" && <MonitorPage />}
         {page === "squads" && <SquadsPage />}
         {page === "skills" && <SkillsPage />}
+        {page === "agents" && <AgentsPage />}
         {page === "runs" && <RunsPage />}
         {page === "settings" && <SettingsPage />}
       </main>

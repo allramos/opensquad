@@ -67,7 +67,22 @@ export const api = {
   getCompanyContext: () => fetchJson<{ content: string }>("/api/company-context"),
   saveCompanyContext: (content: string) =>
     fetchJson<{ ok: boolean }>("/api/company-context", { method: "PUT", body: JSON.stringify({ content }) }),
+  getModelConfig: () => fetchJson<{ models: Record<string, string> }>("/api/model-config"),
+  saveModelConfig: (models: Record<string, string>) =>
+    fetchJson<{ ok: boolean }>("/api/model-config", { method: "PUT", body: JSON.stringify({ models }) }),
   getEnvVars: () => fetchJson<Record<string, string>>("/api/env"),
   saveEnvVars: (vars: Record<string, string>) =>
     fetchJson<{ ok: boolean }>("/api/env", { method: "PUT", body: JSON.stringify(vars) }),
+  getAvailableSkills: () => fetchJson<(SkillInfo & { installed: boolean })[]>("/api/skills/available"),
+  installSkill: (id: string) =>
+    fetchJson<{ ok: boolean; id: string }>("/api/skills/install", { method: "POST", body: JSON.stringify({ id }) }),
+  uninstallSkill: (id: string) =>
+    fetchJson<{ ok: boolean; id: string }>("/api/skills/uninstall", { method: "POST", body: JSON.stringify({ id }) }),
+  getAvailableAgents: () => fetchJson<(AgentInfo & { installed: boolean })[]>("/api/agents/available"),
+  installAgent: (id: string) =>
+    fetchJson<{ ok: boolean; id: string }>("/api/agents/install", { method: "POST", body: JSON.stringify({ id }) }),
+  uninstallAgent: (id: string) =>
+    fetchJson<{ ok: boolean; id: string }>("/api/agents/uninstall", { method: "POST", body: JSON.stringify({ id }) }),
+  updateCore: () =>
+    fetchJson<{ ok: boolean; from: string; to: string; filesUpdated: number }>("/api/update", { method: "POST" }),
 };

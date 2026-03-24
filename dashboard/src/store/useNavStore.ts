@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Page = "dashboard" | "monitor" | "squads" | "skills" | "runs" | "settings";
+export type Page = "dashboard" | "monitor" | "squads" | "skills" | "agents" | "runs" | "settings";
 
 interface NavStore {
   currentPage: Page;

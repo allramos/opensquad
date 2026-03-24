@@ -4,6 +4,7 @@ import {
   Monitor,
   Users,
   Puzzle,
+  UserCheck,
   History,
   Settings,
   Zap,
@@ -17,6 +18,7 @@ const navItems: { icon: typeof LayoutDashboard; labelKey: string; page: Page }[]
   { icon: Monitor, labelKey: "nav.monitor", page: "monitor" },
   { icon: Users, labelKey: "nav.squads", page: "squads" },
   { icon: Puzzle, labelKey: "nav.skills", page: "skills" },
+  { icon: UserCheck, labelKey: "nav.agents", page: "agents" },
   { icon: History, labelKey: "nav.runs", page: "runs" },
   { icon: Settings, labelKey: "nav.settings", page: "settings" },
 ];
