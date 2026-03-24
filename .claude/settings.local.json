@@ -14,7 +14,22 @@
       "Bash(echo \"exit=$?\")",
       "Bash(npx eslint:*)",
       "Bash(node -e \":*)",
-      "Bash(node --input-type=module -e \":*)"
+      "Bash(node --input-type=module -e \":*)",
+      "Bash(find /c/Users/allan/Documents/workspace-claude/opensquad/dashboard -type f -name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx)",
+      "Bash(find /c/Users/allan/Documents/workspace-claude/opensquad/skills -name *.ts -o -name *.js)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"dashboard management orchestration admin panel dark mode\" --design-system -p \"Opensquad Dashboard\")",
+      "Bash(where python:*)",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"dashboard management orchestration admin panel dark mode\" --design-system -p \"Opensquad Dashboard\")",
+      "Bash(npx tsc:*)",
+      "Bash(curl* )",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_click",
+      "Bash(taskkill //F //IM node.exe)",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_type"
     ]
   },
   "outputStyle": "default"
