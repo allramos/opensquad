@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { listRuns, formatDuration } from '../src/runs.js';
+import { listRuns, formatDuration, printRuns } from '../src/runs.js';
 
 test('listRuns returns empty array when no squads exist', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'osq-runs-'));
@@ -163,4 +163,54 @@ test('listRuns ignores non-directory entries in output', async () => {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+// --- printRuns ---
+
+test('printRuns outputs "No runs found" for empty array', () => {
+  const lines = [];
+  const origLog = console.log;
+  console.log = (msg) => lines.push(msg);
+  try {
+    printRuns([]);
+  } finally {
+    console.log = origLog;
+  }
+  assert.ok(lines.some((l) => l.includes('No runs found')));
+});
+
+test('printRuns outputs squad name and run details', () => {
+  const lines = [];
+  const origLog = console.log;
+  console.log = (msg) => lines.push(msg);
+  try {
+    printRuns([
+      { squad: 'my-squad', runId: '2026-03-17-120000', status: 'completed', steps: '3/3', duration: '5m 30s' },
+    ]);
+  } finally {
+    console.log = origLog;
+  }
+  const all = lines.join('\n');
+  assert.ok(all.includes('my-squad'));
+  assert.ok(all.includes('2026-03-17-120000'));
+  assert.ok(all.includes('completed'));
+  assert.ok(all.includes('5m 30s'));
+});
+
+test('printRuns groups runs by squad', () => {
+  const lines = [];
+  const origLog = console.log;
+  console.log = (msg) => lines.push(msg);
+  try {
+    printRuns([
+      { squad: 'alpha', runId: 'run-2', status: 'running', steps: null, duration: null },
+      { squad: 'alpha', runId: 'run-1', status: 'completed', steps: '2/2', duration: '1m 0s' },
+      { squad: 'beta', runId: 'run-3', status: 'failed', steps: '1/3', duration: '30s' },
+    ]);
+  } finally {
+    console.log = origLog;
+  }
+  const all = lines.join('\n');
+  assert.ok(all.includes('alpha'));
+  assert.ok(all.includes('beta'));
 });

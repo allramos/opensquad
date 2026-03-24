@@ -78,11 +78,10 @@ test('init writes preferences file with defaults when prompts skipped', async ()
   try {
     await init(tempDir, { _skipPrompts: true });
 
-    const prefs = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.md'), 'utf-8');
-    assert.ok(prefs.includes('Output Language:'));
-    assert.ok(prefs.includes('English'));
-    assert.ok(prefs.includes('IDEs:'));
-    assert.ok(prefs.includes('claude-code'));
+    const raw = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.json'), 'utf-8');
+    const prefs = JSON.parse(raw);
+    assert.equal(prefs.language, 'English');
+    assert.ok(prefs.ides.includes('claude-code'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -94,8 +93,9 @@ test('init with language option produces translated preferences', async () => {
   try {
     await init(tempDir, { _skipPrompts: true, _language: 'Português (Brasil)' });
 
-    const prefs = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.md'), 'utf-8');
-    assert.ok(prefs.includes('Português (Brasil)'));
+    const raw = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.json'), 'utf-8');
+    const prefs = JSON.parse(raw);
+    assert.equal(prefs.language, 'Português (Brasil)');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -235,9 +235,10 @@ test('init with multiple ides records all in preferences', async () => {
   try {
     await init(tempDir, { _skipPrompts: true, _ides: ['claude-code', 'codex'] });
 
-    const prefs = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.md'), 'utf-8');
-    assert.ok(prefs.includes('claude-code'));
-    assert.ok(prefs.includes('codex'));
+    const raw = await readFile(join(tempDir, '_opensquad', '_memory', 'preferences.json'), 'utf-8');
+    const prefs = JSON.parse(raw);
+    assert.ok(prefs.ides.includes('claude-code'));
+    assert.ok(prefs.ides.includes('codex'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

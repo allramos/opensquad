@@ -11,38 +11,53 @@ const LANG_MAP = {
   'Español': 'es',
 };
 
-let strings = {};
-let fallback = {};
-let currentCode = 'en';
+/**
+ * Create an isolated i18n instance. Useful for testing or
+ * scenarios where multiple locales need to coexist.
+ */
+export function createI18n() {
+  let strings = {};
+  let fallback = {};
+  let currentCode = 'en';
 
-export async function loadLocale(langLabel) {
-  const code = LANG_MAP[langLabel] || 'en';
-  currentCode = code;
+  async function loadLocale(langLabel) {
+    const code = LANG_MAP[langLabel] || 'en';
+    currentCode = code;
 
-  const enPath = join(LOCALES_DIR, 'en.json');
-  fallback = JSON.parse(await readFile(enPath, 'utf-8'));
+    const enPath = join(LOCALES_DIR, 'en.json');
+    fallback = JSON.parse(await readFile(enPath, 'utf-8'));
 
-  if (code === 'en') {
-    strings = fallback;
-    return;
+    if (code === 'en') {
+      strings = fallback;
+      return;
+    }
+
+    try {
+      const localePath = join(LOCALES_DIR, `${code}.json`);
+      strings = JSON.parse(await readFile(localePath, 'utf-8'));
+    } catch {
+      strings = fallback;
+    }
   }
 
-  try {
-    const localePath = join(LOCALES_DIR, `${code}.json`);
-    strings = JSON.parse(await readFile(localePath, 'utf-8'));
-  } catch {
-    strings = fallback;
+  function getLocaleCode() {
+    return currentCode;
   }
+
+  function t(key, vars = {}) {
+    let str = strings[key] ?? fallback[key] ?? key;
+    for (const [k, v] of Object.entries(vars)) {
+      str = str.replaceAll(`{${k}}`, v);
+    }
+    return str;
+  }
+
+  return { loadLocale, getLocaleCode, t };
 }
 
-export function getLocaleCode() {
-  return currentCode;
-}
+// Default singleton instance — used by the CLI
+const defaultInstance = createI18n();
 
-export function t(key, vars = {}) {
-  let str = strings[key] ?? fallback[key] ?? key;
-  for (const [k, v] of Object.entries(vars)) {
-    str = str.replaceAll(`{${k}}`, v);
-  }
-  return str;
-}
+export const loadLocale = defaultInstance.loadLocale;
+export const getLocaleCode = defaultInstance.getLocaleCode;
+export const t = defaultInstance.t;

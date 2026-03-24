@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadLocale, t, getLocaleCode } from '../src/i18n.js';
+import { loadLocale, t, getLocaleCode, createI18n } from '../src/i18n.js';
 
 test('loadLocale loads English by default', async () => {
   await loadLocale('English');
@@ -115,4 +115,23 @@ test('all locales have step1Cursor key', async () => {
       `${locale}.json: step1Cursor must not be empty`
     );
   }
+});
+
+// --- createI18n (isolated instances) ---
+
+test('createI18n returns an isolated instance', async () => {
+  const i18n = createI18n();
+  await i18n.loadLocale('Português (Brasil)');
+  assert.equal(i18n.getLocaleCode(), 'pt-BR');
+  assert.equal(i18n.t('success'), '✅ Opensquad inicializado com sucesso!');
+});
+
+test('createI18n instances are independent', async () => {
+  const a = createI18n();
+  const b = createI18n();
+  await a.loadLocale('Português (Brasil)');
+  await b.loadLocale('English');
+  assert.equal(a.getLocaleCode(), 'pt-BR');
+  assert.equal(b.getLocaleCode(), 'en');
+  assert.notEqual(a.t('success'), b.t('success'));
 });

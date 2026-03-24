@@ -5,19 +5,11 @@ import { loadLocale, t } from './i18n.js';
 import { getTemplateEntries, loadSavedLocale } from './init.js';
 import { listAvailable as listAvailableSkills, listInstalled as listInstalledSkills, installSkill, getSkillMeta } from './skills.js';
 import { logEvent } from './logger.js';
+import { readPreferences } from './preferences.js';
 
 async function loadSavedIdes(targetDir) {
-  try {
-    const prefsPath = join(targetDir, '_opensquad', '_memory', 'preferences.md');
-    const content = await readFile(prefsPath, 'utf-8');
-    const match = content.match(/\*\*IDEs:\*\*\s*(.+)/);
-    if (match) {
-      return match[1].trim().split(/,\s*/);
-    }
-  } catch {
-    // No preferences file
-  }
-  return ['claude-code'];
+  const prefs = await readPreferences(targetDir);
+  return prefs.ides;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

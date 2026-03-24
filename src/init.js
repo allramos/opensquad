@@ -6,6 +6,7 @@ import { createPrompt } from './prompt.js';
 import { loadLocale, t } from './i18n.js';
 import { listAvailable, installSkill } from './skills.js';
 import { logEvent } from './logger.js';
+import { readPreferences, writePreferences } from './preferences.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'templates');
@@ -76,16 +77,12 @@ export async function init(targetDir, options = {}) {
   await writeProjectReadme(targetDir);
 
   // Write user preferences
-  const prefsPath = join(targetDir, '_opensquad', '_memory', 'preferences.md');
-  await mkdir(dirname(prefsPath), { recursive: true });
-  const prefsContent = `# Opensquad Preferences
-
-- **User Name:** ${userName}
-- **Output Language:** ${language}
-- **IDEs:** ${ides.join(', ')}
-- **Date Format:** YYYY-MM-DD
-`;
-  await writeFile(prefsPath, prefsContent, 'utf-8');
+  await writePreferences(targetDir, {
+    userName,
+    language,
+    ides,
+    dateFormat: 'YYYY-MM-DD',
+  });
 
   await logEvent('init', { language, ides: ides.join(',') }, targetDir);
 
@@ -113,18 +110,8 @@ export async function init(targetDir, options = {}) {
 }
 
 export async function loadSavedLocale(targetDir) {
-  try {
-    const prefsPath = join(targetDir, '_opensquad', '_memory', 'preferences.md');
-    const content = await readFile(prefsPath, 'utf-8');
-    const match = content.match(/\*\*Output Language:\*\*\s*(.+)/);
-    if (match) {
-      await loadLocale(match[1].trim());
-      return;
-    }
-  } catch {
-    // No preferences file yet
-  }
-  await loadLocale('English');
+  const prefs = await readPreferences(targetDir);
+  await loadLocale(prefs.language);
 }
 
 async function installAllSkills(targetDir) {
