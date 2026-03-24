@@ -1,11 +1,19 @@
-import { copyFile, mkdir, readdir, readFile, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { copyFile, mkdir, readdir, rm, stat } from 'node:fs/promises';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  parseFrontmatter,
+  parseLocalizedDescriptions,
+  getLocalizedDescription,
+  validateId,
+  createMetaCache,
+  getVersionFromFile,
+} from './registry.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BUNDLED_AGENTS_DIR = join(__dirname, '..', 'agents');
 
-const metaCache = new Map();
+const metaCache = createMetaCache();
 
 export async function listInstalled(targetDir) {
   try {
@@ -32,41 +40,15 @@ export async function listAvailable() {
 export async function getAgentMeta(id) {
   if (metaCache.has(id)) return metaCache.get(id);
   try {
-    const raw = await readFile(join(BUNDLED_AGENTS_DIR, id, 'AGENT.md'), 'utf-8');
-    const content = raw.replace(/\r\n/g, '\n');
-    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!fmMatch) return { name: id, description: '', descriptions: {}, category: '', icon: '', version: '' };
+    const filePath = join(BUNDLED_AGENTS_DIR, id, 'AGENT.md');
+    const { data } = await parseFrontmatter(filePath);
 
-    const fm = fmMatch[1];
-    const name = fm.match(/^name:\s*(.+)$/m)?.[1]?.trim() || id;
-    const category = fm.match(/^category:\s*(.+)$/m)?.[1]?.trim() || '';
-    const icon = fm.match(/^icon:\s*(.+)$/m)?.[1]?.trim() || '';
-    const version = fm.match(/^version:\s*(.+)$/m)?.[1]?.trim() || '';
-
-    // description may use YAML folded scalar (>)
-    let description = '';
-    const descBlock = fm.match(/^description:\s*>\s*\n((?:\s{2,}.+\n?)+)/m);
-    if (descBlock) {
-      description = descBlock[1].replace(/\n\s*/g, ' ').trim();
-    } else {
-      const descInline = fm.match(/^description:\s*(.+)$/m);
-      if (descInline) description = descInline[1].trim();
-    }
-
-    // localized descriptions: description_pt-BR, description_es, etc.
-    const descriptions = {};
-    for (const code of ['pt-BR', 'es']) {
-      const key = `description_${code}`;
-      // folded scalar
-      const blockMatch = fm.match(new RegExp(`^${key}:\\s*>\\s*\\n((?:\\s{2,}.+\\n?)+)`, 'm'));
-      if (blockMatch) {
-        descriptions[code] = blockMatch[1].replace(/\n\s*/g, ' ').trim();
-      } else {
-        // inline
-        const inlineMatch = fm.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
-        if (inlineMatch) descriptions[code] = inlineMatch[1].trim();
-      }
-    }
+    const name = data.name ? String(data.name).trim() : id;
+    const description = data.description ? String(data.description).trim() : '';
+    const category = data.category ? String(data.category).trim() : '';
+    const icon = data.icon ? String(data.icon).trim() : '';
+    const version = data.version ? String(data.version).trim() : '';
+    const descriptions = parseLocalizedDescriptions(data);
 
     const result = { name, description, descriptions, category, icon, version };
     metaCache.set(id, result);
@@ -80,30 +62,35 @@ export async function getAgentMeta(id) {
   }
 }
 
-function validateAgentId(id) {
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
-    throw new Error(`Invalid agent id: '${id}'`);
-  }
-}
-
 export async function installAgent(id, targetDir) {
-  validateAgentId(id);
+  validateId(id, 'agent');
   const srcFile = join(BUNDLED_AGENTS_DIR, id, 'AGENT.md');
   try {
-    await readFile(srcFile);
+    await stat(srcFile);
   } catch (err) {
     if (err.code === 'ENOENT') throw new Error(`Agent '${id}' not found in registry`, { cause: err });
     throw err;
   }
   const destDir = join(targetDir, 'agents');
+  const destFile = join(destDir, `${id}.agent.md`);
+  const resolvedDest = resolve(destFile);
+  const resolvedTarget = resolve(targetDir);
+  if (!resolvedDest.startsWith(resolvedTarget + sep)) {
+    throw new Error(`Agent destination escapes target directory: '${id}'`);
+  }
   await mkdir(destDir, { recursive: true });
-  await copyFile(srcFile, join(destDir, `${id}.agent.md`));
+  await copyFile(srcFile, destFile);
   metaCache.delete(id);
 }
 
 export async function removeAgent(id, targetDir) {
-  validateAgentId(id);
+  validateId(id, 'agent');
   const agentFile = join(targetDir, 'agents', `${id}.agent.md`);
+  const resolvedFile = resolve(agentFile);
+  const resolvedTarget = resolve(targetDir);
+  if (!resolvedFile.startsWith(resolvedTarget + sep)) {
+    throw new Error(`Agent path escapes target directory: '${id}'`);
+  }
   await rm(agentFile, { force: true });
   metaCache.delete(id);
 }
@@ -113,22 +100,8 @@ export function clearMetaCache() {
 }
 
 export async function getAgentVersion(id, targetDir) {
-  try {
-    const agentPath = join(targetDir, 'agents', `${id}.agent.md`);
-    const content = await readFile(agentPath, 'utf-8');
-    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!fmMatch) return null;
-    const versionMatch = fmMatch[1].match(/^version:\s*(.+)$/m);
-    return versionMatch ? versionMatch[1].trim() : null;
-  } catch (err) {
-    if (err.code === 'ENOENT') return null;
-    throw err;
-  }
+  const agentPath = join(targetDir, 'agents', `${id}.agent.md`);
+  return getVersionFromFile(agentPath);
 }
 
-export function getLocalizedDescription(meta, localeCode) {
-  if (localeCode && localeCode !== 'en' && meta.descriptions?.[localeCode]) {
-    return meta.descriptions[localeCode];
-  }
-  return meta.description;
-}
+export { getLocalizedDescription };

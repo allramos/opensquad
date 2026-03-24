@@ -1,11 +1,19 @@
-import { cp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { cp, readdir, rm, stat } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  parseFrontmatter,
+  parseLocalizedDescriptions,
+  getLocalizedDescription,
+  validateId,
+  createMetaCache,
+  getVersionFromFile,
+} from './registry.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BUNDLED_SKILLS_DIR = join(__dirname, '..', 'skills');
 
-const metaCache = new Map();
+const metaCache = createMetaCache();
 
 export async function listInstalled(targetDir) {
   try {
@@ -32,49 +40,14 @@ export async function listAvailable() {
 export async function getSkillMeta(id) {
   if (metaCache.has(id)) return metaCache.get(id);
   try {
-    const raw = await readFile(join(BUNDLED_SKILLS_DIR, id, 'SKILL.md'), 'utf-8');
-    const content = raw.replace(/\r\n/g, '\n');
-    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!fmMatch) return { name: id, description: '', descriptions: {}, type: '', env: [] };
+    const filePath = join(BUNDLED_SKILLS_DIR, id, 'SKILL.md');
+    const { data } = await parseFrontmatter(filePath);
 
-    const fm = fmMatch[1];
-    const name = fm.match(/^name:\s*(.+)$/m)?.[1]?.trim() || id;
-    const type = fm.match(/^type:\s*(.+)$/m)?.[1]?.trim() || '';
-
-    // description may use YAML folded scalar (>)
-    let description = '';
-    const descBlock = fm.match(/^description:\s*>\s*\n((?:\s{2,}.+\n?)+)/m);
-    if (descBlock) {
-      description = descBlock[1].replace(/\n\s*/g, ' ').trim();
-    } else {
-      const descInline = fm.match(/^description:\s*(.+)$/m);
-      if (descInline) description = descInline[1].trim();
-    }
-
-    // localized descriptions: description_pt-BR, description_es, etc.
-    const descriptions = {};
-    for (const code of ['pt-BR', 'es']) {
-      const key = `description_${code}`;
-      // folded scalar
-      const blockMatch = fm.match(new RegExp(`^${key}:\\s*>\\s*\\n((?:\\s{2,}.+\\n?)+)`, 'm'));
-      if (blockMatch) {
-        descriptions[code] = blockMatch[1].replace(/\n\s*/g, ' ').trim();
-      } else {
-        // inline
-        const inlineMatch = fm.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
-        if (inlineMatch) descriptions[code] = inlineMatch[1].trim();
-      }
-    }
-
-    // env is a YAML list: lines starting with "  - "
-    const env = [];
-    const envSection = fm.match(/^env:\s*\n((?:\s+-\s+.+\n?)+)/m);
-    if (envSection) {
-      for (const line of envSection[1].split('\n')) {
-        const item = line.match(/^\s+-\s+(.+)/);
-        if (item) env.push(item[1].trim());
-      }
-    }
+    const name = data.name ? String(data.name).trim() : id;
+    const description = data.description ? String(data.description).trim() : '';
+    const type = data.type ? String(data.type).trim() : '';
+    const env = Array.isArray(data.env) ? data.env.map((v) => String(v).trim()) : [];
+    const descriptions = parseLocalizedDescriptions(data);
 
     const result = { name, description, descriptions, type, env };
     metaCache.set(id, result);
@@ -88,14 +61,8 @@ export async function getSkillMeta(id) {
   }
 }
 
-function validateSkillId(id) {
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
-    throw new Error(`Invalid skill id: '${id}'`);
-  }
-}
-
 export async function installSkill(id, targetDir) {
-  validateSkillId(id);
+  validateId(id, 'skill');
   const srcDir = join(BUNDLED_SKILLS_DIR, id);
   try {
     await stat(srcDir);
@@ -106,16 +73,26 @@ export async function installSkill(id, targetDir) {
   const destDir = join(targetDir, 'skills', id);
   const resolvedSrc = resolve(srcDir);
   const resolvedDest = resolve(destDir);
+  const resolvedTarget = resolve(targetDir);
   if (resolvedSrc === resolvedDest || resolvedDest.startsWith(resolvedSrc + sep)) {
     return;
+  }
+  // Ensure destination is within targetDir
+  if (!resolvedDest.startsWith(resolvedTarget + sep)) {
+    throw new Error(`Skill destination escapes target directory: '${id}'`);
   }
   await cp(srcDir, destDir, { recursive: true });
   metaCache.delete(id);
 }
 
 export async function removeSkill(id, targetDir) {
-  validateSkillId(id);
+  validateId(id, 'skill');
   const skillDir = join(targetDir, 'skills', id);
+  const resolvedDir = resolve(skillDir);
+  const resolvedTarget = resolve(targetDir);
+  if (!resolvedDir.startsWith(resolvedTarget + sep)) {
+    throw new Error(`Skill path escapes target directory: '${id}'`);
+  }
   await rm(skillDir, { recursive: true, force: true });
   metaCache.delete(id);
 }
@@ -125,22 +102,8 @@ export function clearMetaCache() {
 }
 
 export async function getSkillVersion(id, targetDir) {
-  try {
-    const skillPath = join(targetDir, 'skills', id, 'SKILL.md');
-    const content = await readFile(skillPath, 'utf-8');
-    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!fmMatch) return null;
-    const versionMatch = fmMatch[1].match(/^version:\s*(.+)$/m);
-    return versionMatch ? versionMatch[1].trim() : null;
-  } catch (err) {
-    if (err.code === 'ENOENT') return null;
-    throw err;
-  }
+  const skillPath = join(targetDir, 'skills', id, 'SKILL.md');
+  return getVersionFromFile(skillPath);
 }
 
-export function getLocalizedDescription(meta, localeCode) {
-  if (localeCode && localeCode !== 'en' && meta.descriptions?.[localeCode]) {
-    return meta.descriptions[localeCode];
-  }
-  return meta.description;
-}
+export { getLocalizedDescription };

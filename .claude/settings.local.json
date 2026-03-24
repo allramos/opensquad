@@ -3,7 +3,9 @@
     "allow": [
       "Read(//c/Users/renat/.claude/plugins//**)",
       "Read(//c/Users/renat/.claude/plugins/**)",
-      "Read(//c/Users/renat/.claude/**)"
+      "Read(//c/Users/renat/.claude/**)",
+      "Bash(npm test:*)",
+      "Bash(npm install:*)"
     ]
   },
   "outputStyle": "default"

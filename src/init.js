@@ -136,12 +136,22 @@ async function installAllSkills(targetDir) {
 }
 
 async function installDependencies(targetDir) {
-  console.log(`\n  Installing dependencies...`);
-  execSync('npm install', { cwd: targetDir, stdio: 'inherit' });
-  console.log(`\n  Installing dashboard dependencies...`);
-  execSync('npm install', { cwd: join(targetDir, 'dashboard'), stdio: 'inherit' });
-  console.log(`\n  Installing Playwright browsers...`);
-  execSync('npx playwright install chromium', { cwd: targetDir, stdio: 'inherit' });
+  const steps = [
+    { label: 'Installing dependencies...', cmd: 'npm install', cwd: targetDir },
+    { label: 'Installing dashboard dependencies...', cmd: 'npm install', cwd: join(targetDir, 'dashboard') },
+    { label: 'Installing Playwright browsers...', cmd: 'npx playwright install chromium', cwd: targetDir },
+  ];
+
+  for (const { label, cmd, cwd } of steps) {
+    console.log(`\n  ${label}`);
+    try {
+      execSync(cmd, { cwd, stdio: 'inherit' });
+    } catch (err) {
+      console.error(`\n  ⚠️  Failed: ${cmd}`);
+      console.error(`  ${err.message}\n`);
+      // Continue with remaining steps — partial install is better than none
+    }
+  }
 }
 
 async function writeProjectReadme(targetDir) {
