@@ -73,8 +73,8 @@ export async function installAgent(id, targetDir) {
   }
   const destDir = join(targetDir, 'agents');
   const destFile = join(destDir, `${id}.agent.md`);
-  const resolvedDest = resolve(destFile);
-  const resolvedTarget = resolve(targetDir);
+  const resolvedDest = resolve(destFile).toLowerCase();
+  const resolvedTarget = resolve(targetDir).toLowerCase();
   if (!resolvedDest.startsWith(resolvedTarget + sep)) {
     throw new Error(`Agent destination escapes target directory: '${id}'`);
   }
@@ -86,8 +86,8 @@ export async function installAgent(id, targetDir) {
 export async function removeAgent(id, targetDir) {
   validateId(id, 'agent');
   const agentFile = join(targetDir, 'agents', `${id}.agent.md`);
-  const resolvedFile = resolve(agentFile);
-  const resolvedTarget = resolve(targetDir);
+  const resolvedFile = resolve(agentFile).toLowerCase();
+  const resolvedTarget = resolve(targetDir).toLowerCase();
   if (!resolvedFile.startsWith(resolvedTarget + sep)) {
     throw new Error(`Agent path escapes target directory: '${id}'`);
   }

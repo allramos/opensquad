@@ -71,9 +71,9 @@ export async function installSkill(id, targetDir) {
     throw err;
   }
   const destDir = join(targetDir, 'skills', id);
-  const resolvedSrc = resolve(srcDir);
-  const resolvedDest = resolve(destDir);
-  const resolvedTarget = resolve(targetDir);
+  const resolvedSrc = resolve(srcDir).toLowerCase();
+  const resolvedDest = resolve(destDir).toLowerCase();
+  const resolvedTarget = resolve(targetDir).toLowerCase();
   if (resolvedSrc === resolvedDest || resolvedDest.startsWith(resolvedSrc + sep)) {
     return;
   }
@@ -88,8 +88,8 @@ export async function installSkill(id, targetDir) {
 export async function removeSkill(id, targetDir) {
   validateId(id, 'skill');
   const skillDir = join(targetDir, 'skills', id);
-  const resolvedDir = resolve(skillDir);
-  const resolvedTarget = resolve(targetDir);
+  const resolvedDir = resolve(skillDir).toLowerCase();
+  const resolvedTarget = resolve(targetDir).toLowerCase();
   if (!resolvedDir.startsWith(resolvedTarget + sep)) {
     throw new Error(`Skill path escapes target directory: '${id}'`);
   }
