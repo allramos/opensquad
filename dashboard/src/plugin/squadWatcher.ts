@@ -8,6 +8,7 @@ import { watch as chokidarWatch } from "chokidar";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { SquadInfo, SquadState, WsMessage } from "../types/state";
+import { registerApiRoutes } from "./apiRoutes";
 
 function resolveSquadsDir(): string {
   const candidates = [
@@ -175,6 +176,10 @@ export function squadWatcherPlugin(): Plugin {
           res.end("Internal Server Error");
         }
       });
+
+      // REST API routes for dashboard (skills, agents, runs, preferences, etc.)
+      const projectRoot = path.resolve(squadsDir, "..");
+      registerApiRoutes(server, projectRoot);
 
       // File watcher using chokidar — reliable cross-platform, handles partial writes
       const watcher = chokidarWatch(squadsDir, {

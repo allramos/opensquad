@@ -1,46 +1,28 @@
 import { useSquadSocket } from "@/hooks/useSquadSocket";
-import { SquadSelector } from "@/components/SquadSelector";
-import { OfficeScene } from "@/office/OfficeScene";
-import { StatusBar } from "@/components/StatusBar";
+import { useNavStore } from "@/store/useNavStore";
+import { Sidebar } from "@/components/Sidebar";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { MonitorPage } from "@/pages/MonitorPage";
+import { SquadsPage } from "@/pages/SquadsPage";
+import { SkillsPage } from "@/pages/SkillsPage";
+import { RunsPage } from "@/pages/RunsPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 
 export function App() {
   useSquadSocket();
+  const page = useNavStore((s) => s.currentPage);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          padding: "0 16px",
-          height: 40,
-          minHeight: 40,
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-sidebar)",
-          fontSize: 13,
-          fontWeight: 600,
-          letterSpacing: 0.5,
-        }}
-      >
-        opensquad Dashboard
-      </header>
-
-      {/* Main content */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <SquadSelector />
-        <OfficeScene />
-      </div>
-
-      {/* Footer */}
-      <StatusBar />
+    <div style={{ display: "flex", height: "100%", width: "100%" }}>
+      <Sidebar />
+      <main style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {page === "dashboard" && <DashboardPage />}
+        {page === "monitor" && <MonitorPage />}
+        {page === "squads" && <SquadsPage />}
+        {page === "skills" && <SkillsPage />}
+        {page === "runs" && <RunsPage />}
+        {page === "settings" && <SettingsPage />}
+      </main>
     </div>
   );
 }
