@@ -32,11 +32,9 @@ export async function agentsCli(subcommand, args, targetDir) {
     if (subcommand === 'list' || !subcommand) {
       await runList(targetDir);
     } else if (subcommand === 'install') {
-      const installed = await runInstall(args[0], targetDir);
-      if (installed === false) return { success: false };
+      if (!(await runInstall(args[0], targetDir))) return { success: false };
     } else if (subcommand === 'remove') {
-      const removed = await runRemove(args[0], targetDir);
-      if (removed === false) return { success: false };
+      if (!(await runRemove(args[0], targetDir))) return { success: false };
     } else if (subcommand === 'update') {
       await runUpdate(targetDir);
     } else if (subcommand === 'update-one') {
@@ -54,7 +52,7 @@ export async function agentsCli(subcommand, args, targetDir) {
 }
 
 async function runList(targetDir) {
-  console.log(`\n  Opensquad Agents\n`);
+  console.log(`\n  ${t('agentsTitle')}\n`);
 
   const installed = await listInstalled(targetDir);
 
@@ -77,12 +75,12 @@ async function runList(targetDir) {
     console.log(`  ${t('agentsNoneInstalled')}`);
   }
 
-  console.log(`\n  Browse available agents at: https://github.com/renatoasse/opensquad/tree/main/agents\n`);
+  console.log(`\n  ${t('agentsBrowse')}\n`);
 }
 
 async function runInstall(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad agents install <id>\n');
+    console.log(`\n  ${t('agentsUsageInstall')}\n`);
     return false;
   }
 
@@ -95,31 +93,33 @@ async function runInstall(id, targetDir) {
     await installAgent(id, targetDir);
     console.log(`  ${t('agentsReinstalled', { id })}\n`);
     await logEvent('agent:install', { name: id, reinstall: true }, targetDir);
-    return;
+    return true;
   }
 
   console.log(`\n  ${t('agentsInstalling', { id })}`);
   await installAgent(id, targetDir);
   console.log(`  ${t('agentsInstalled', { id })}\n`);
   await logEvent('agent:install', { name: id }, targetDir);
+  return true;
 }
 
 async function runRemove(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad agents remove <id>\n');
+    console.log(`\n  ${t('agentsUsageRemove')}\n`);
     return false;
   }
 
   const installed = await listInstalled(targetDir);
   if (!installed.includes(id)) {
     console.log(`\n  ${t('agentsNotInstalled', { id })}\n`);
-    return;
+    return false;
   }
 
   console.log(`\n  ${t('agentsRemoving', { id })}`);
   await removeAgent(id, targetDir);
   await logEvent('agent:remove', { name: id }, targetDir);
   console.log(`  ${t('agentsRemoved', { id })}\n`);
+  return true;
 }
 
 async function runUpdate(targetDir) {
@@ -141,7 +141,7 @@ async function runUpdate(targetDir) {
 
 async function runUpdateOne(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad update <name>\n');
+    console.log(`\n  ${t('agentsUsageUpdate')}\n`);
     return;
   }
 

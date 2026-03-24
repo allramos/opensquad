@@ -68,5 +68,17 @@
   "agentsUnknownCommand": "Unknown agents command: {cmd}\n  Usage: opensquad agents list|install|remove|update",
   "step1VsCodeCopilot": "1. Open this directory in VS Code",
   "step2VsCodeCopilot": "2. Open Copilot Chat (Ctrl+Alt+I)",
-  "step3VsCodeCopilot": "3. Type /opensquad to get started"
+  "step3VsCodeCopilot": "3. Type /opensquad to get started",
+  "skillsTitle": "Opensquad Skills",
+  "skillsBrowse": "Browse available skills at: https://github.com/renatoasse/opensquad/tree/main/skills",
+  "skillsUsageInstall": "Usage: opensquad install <id>",
+  "skillsUsageUninstall": "Usage: opensquad uninstall <id>",
+  "skillsUsageUpdate": "Usage: opensquad update <name>",
+  "agentsTitle": "Opensquad Agents",
+  "agentsBrowse": "Browse available agents at: https://github.com/renatoasse/opensquad/tree/main/agents",
+  "agentsUsageInstall": "Usage: opensquad agents install <id>",
+  "agentsUsageRemove": "Usage: opensquad agents remove <id>",
+  "agentsUsageUpdate": "Usage: opensquad update <name>",
+  "noRunsFound": "No runs found.",
+  "updateBanner": "🔄 Opensquad — Update"
 }

@@ -4,6 +4,7 @@ import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { listRuns, formatDuration, printRuns } from '../src/runs.js';
+import { loadLocale } from '../src/i18n.js';
 
 test('listRuns returns empty array when no squads exist', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'osq-runs-'));
@@ -167,7 +168,8 @@ test('listRuns ignores non-directory entries in output', async () => {
 
 // --- printRuns ---
 
-test('printRuns outputs "No runs found" for empty array', () => {
+test('printRuns outputs "No runs found" for empty array', async () => {
+  await loadLocale('English');
   const lines = [];
   const origLog = console.log;
   console.log = (msg) => lines.push(msg);

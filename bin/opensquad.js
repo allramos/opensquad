@@ -7,6 +7,7 @@ import { update } from '../src/update.js';
 import { skillsCli } from '../src/skills-cli.js';
 import { agentsCli } from '../src/agents-cli.js';
 import { listRuns, printRuns } from '../src/runs.js';
+import { loadSavedLocale } from '../src/init.js';
 
 const HELP_TEXT = `
   opensquad — Multi-agent orchestration for Claude Code
@@ -81,6 +82,7 @@ try {
       const result = await agentsCli(subcommand, args, process.cwd());
       if (!result.success) process.exitCode = 1;
     } else if (command === 'runs') {
+      await loadSavedLocale(process.cwd());
       const squadName = positionals[1] || null;
       const runs = await listRuns(squadName, process.cwd());
       printRuns(runs);

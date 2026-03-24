@@ -30,7 +30,7 @@ function isProtected(relativePath) {
 }
 
 export async function update(targetDir) {
-  console.log('\n  🔄 Opensquad — Update\n');
+  console.log(`\n  ${t('updateBanner')}\n`);
 
   // 1. Check initialized
   try {

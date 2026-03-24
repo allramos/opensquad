@@ -32,11 +32,9 @@ export async function skillsCli(subcommand, args, targetDir) {
     if (subcommand === 'list' || !subcommand) {
       await runList(targetDir);
     } else if (subcommand === 'install') {
-      const installed = await runInstall(args[0], targetDir);
-      if (installed === false) return { success: false };
+      if (!(await runInstall(args[0], targetDir))) return { success: false };
     } else if (subcommand === 'remove') {
-      const removed = await runRemove(args[0], targetDir);
-      if (removed === false) return { success: false };
+      if (!(await runRemove(args[0], targetDir))) return { success: false };
     } else if (subcommand === 'update') {
       await runUpdate(targetDir);
     } else if (subcommand === 'update-one') {
@@ -54,7 +52,7 @@ export async function skillsCli(subcommand, args, targetDir) {
 }
 
 async function runList(targetDir) {
-  console.log(`\n  Opensquad Skills\n`);
+  console.log(`\n  ${t('skillsTitle')}\n`);
 
   const installed = await listInstalled(targetDir);
 
@@ -76,12 +74,12 @@ async function runList(targetDir) {
     console.log(`  ${t('skillsNoneInstalled')}`);
   }
 
-  console.log(`\n  Browse available skills at: https://github.com/renatoasse/opensquad/tree/main/skills\n`);
+  console.log(`\n  ${t('skillsBrowse')}\n`);
 }
 
 async function runInstall(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad install <id>\n');
+    console.log(`\n  ${t('skillsUsageInstall')}\n`);
     return false;
   }
 
@@ -94,31 +92,33 @@ async function runInstall(id, targetDir) {
     await installSkill(id, targetDir);
     console.log(`  ${t('skillsReinstalled', { id })}\n`);
     await logEvent('skill:install', { name: id, reinstall: true }, targetDir);
-    return;
+    return true;
   }
 
   console.log(`\n  ${t('skillsInstalling', { id })}`);
   await installSkill(id, targetDir);
   console.log(`  ${t('skillsInstalled', { id })}\n`);
   await logEvent('skill:install', { name: id }, targetDir);
+  return true;
 }
 
 async function runRemove(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad uninstall <id>\n');
+    console.log(`\n  ${t('skillsUsageUninstall')}\n`);
     return false;
   }
 
   const installed = await listInstalled(targetDir);
   if (!installed.includes(id)) {
     console.log(`\n  ${t('skillsNotInstalled', { id })}\n`);
-    return;
+    return false;
   }
 
   console.log(`\n  ${t('skillsRemoving', { id })}`);
   await removeSkill(id, targetDir);
   await logEvent('skill:remove', { name: id }, targetDir);
   console.log(`  ${t('skillsRemoved', { id })}\n`);
+  return true;
 }
 
 async function runUpdate(targetDir) {
@@ -140,7 +140,7 @@ async function runUpdate(targetDir) {
 
 async function runUpdateOne(id, targetDir) {
   if (!id) {
-    console.log('\n  Usage: opensquad update <name>\n');
+    console.log(`\n  ${t('skillsUsageUpdate')}\n`);
     return;
   }
 

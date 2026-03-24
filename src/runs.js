@@ -1,5 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { t } from './i18n.js';
 
 const MAX_RUNS = 20;
 
@@ -69,7 +70,7 @@ export function formatDuration(ms) {
 
 export function printRuns(runs) {
   if (runs.length === 0) {
-    console.log('\n  No runs found.\n');
+    console.log(`\n  ${t('noRunsFound')}\n`);
     return;
   }
 
