@@ -67,4 +67,7 @@ export const api = {
   getCompanyContext: () => fetchJson<{ content: string }>("/api/company-context"),
   saveCompanyContext: (content: string) =>
     fetchJson<{ ok: boolean }>("/api/company-context", { method: "PUT", body: JSON.stringify({ content }) }),
+  getEnvVars: () => fetchJson<Record<string, string>>("/api/env"),
+  saveEnvVars: (vars: Record<string, string>) =>
+    fetchJson<{ ok: boolean }>("/api/env", { method: "PUT", body: JSON.stringify(vars) }),
 };

@@ -264,6 +264,71 @@ async function getSquad(projectRoot: string, code: string) {
   }
 }
 
+async function readEnvFile(projectRoot: string): Promise<Record<string, string>> {
+  const envPath = path.join(projectRoot, ".env");
+  try {
+    const raw = await fsp.readFile(envPath, "utf-8");
+    const vars: Record<string, string> = {};
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx < 1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      vars[key] = val;
+    }
+    return vars;
+  } catch {
+    return {};
+  }
+}
+
+async function writeEnvFile(projectRoot: string, vars: Record<string, string>): Promise<void> {
+  const envPath = path.join(projectRoot, ".env");
+
+  // Preserve comments and structure from existing file
+  let existingLines: string[] = [];
+  try {
+    const raw = await fsp.readFile(envPath, "utf-8");
+    existingLines = raw.split("\n");
+  } catch {
+    // No existing file
+  }
+
+  const writtenKeys = new Set<string>();
+  const outputLines: string[] = [];
+
+  for (const line of existingLines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      outputLines.push(line);
+      continue;
+    }
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx < 1) {
+      outputLines.push(line);
+      continue;
+    }
+    const key = trimmed.slice(0, eqIdx).trim();
+    if (key in vars) {
+      outputLines.push(`${key}=${vars[key]}`);
+      writtenKeys.add(key);
+    } else {
+      outputLines.push(line);
+    }
+  }
+
+  // Append new keys not in existing file
+  for (const [key, val] of Object.entries(vars)) {
+    if (!writtenKeys.has(key)) {
+      outputLines.push(`${key}=${val}`);
+    }
+  }
+
+  await fsp.writeFile(envPath, outputLines.join("\n"), "utf-8");
+}
+
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
@@ -339,6 +404,22 @@ export function registerApiRoutes(
           return jsonResponse(res, 404, { error: "Squad not found" });
         }
         return jsonResponse(res, 200, squad);
+      }
+
+      // GET /api/env
+      if (method === "GET" && url === "/api/env") {
+        const envVars = await readEnvFile(projectRoot);
+        return jsonResponse(res, 200, envVars);
+      }
+
+      // PUT /api/env
+      if (method === "PUT" && url === "/api/env") {
+        const body = JSON.parse(await readBody(req));
+        if (typeof body !== "object" || body === null) {
+          return jsonResponse(res, 400, { error: "body must be an object of key-value pairs" });
+        }
+        await writeEnvFile(projectRoot, body);
+        return jsonResponse(res, 200, { ok: true });
       }
 
       // Not one of our routes — pass through

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Save, Check } from "lucide-react";
+import { Save, Check, Sparkles } from "lucide-react";
 import { api, type Preferences } from "@/lib/api";
 import { useI18nStore } from "@/store/useI18nStore";
+import { CompanyWizard } from "@/components/CompanyWizard";
 
 export function SettingsPage() {
   const t = useI18nStore((s) => s.t);
@@ -16,6 +17,7 @@ export function SettingsPage() {
   const [contextLoading, setContextLoading] = useState(true);
   const [contextError, setContextError] = useState<string | null>(null);
   const [contextSaved, setContextSaved] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     api.getPreferences().then(setPrefs).catch((e) => setPrefsError(e.message)).finally(() => setPrefsLoading(false));
@@ -109,7 +111,29 @@ export function SettingsPage() {
         </section>
 
         <section className="card" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-lg)", padding: 24 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{t("settings.companyContext")}</h2>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600 }}>{t("settings.companyContext")}</h2>
+            <button
+              onClick={() => setShowWizard(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                background: "var(--accent-primary-dim)",
+                color: "var(--accent-primary)",
+                border: "1px solid var(--accent-primary)",
+                borderRadius: "var(--radius-sm)",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "var(--transition-fast)",
+              }}
+            >
+              <Sparkles size={14} />
+              {t("wizard.buttonLabel")}
+            </button>
+          </div>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>{t("settings.companyContextDesc")}</p>
 
           {contextLoading && <div style={{ color: "var(--text-muted)" }}>{t("common.loading")}</div>}
@@ -117,7 +141,7 @@ export function SettingsPage() {
 
           {!contextLoading && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={12} style={{ ...inputStyle, resize: "vertical", minHeight: 200, lineHeight: 1.6 }} />
+              <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={16} placeholder={t("settings.companyContextPlaceholder")} style={{ ...inputStyle, resize: "vertical", minHeight: 280, lineHeight: 1.6 }} />
               <div>
                 <button onClick={saveCtx} style={buttonStyle}>
                   {contextSaved ? <Check size={14} /> : <Save size={14} />}
@@ -128,6 +152,16 @@ export function SettingsPage() {
           )}
         </section>
       </div>
+
+      {showWizard && (
+        <CompanyWizard
+          onComplete={(md) => {
+            setContext(md);
+            setShowWizard(false);
+          }}
+          onClose={() => setShowWizard(false)}
+        />
+      )}
     </div>
   );
 }
